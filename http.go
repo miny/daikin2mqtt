@@ -27,6 +27,65 @@ func hoge(config daikinConfig) {
 	fmt.Println(status)
 }
 
+func getStatus(config daikinConfig) (url.Values, error) {
+	retval := url.Values{}
+	params := []string{}
+
+	uri := "http://" + config.Host
+	if config.Host == cloudHost {
+		uri = "https://" + cloudHost
+		params = append(params, "id="+config.Id)
+		params = append(params, "spw="+config.Pw)
+		params = append(params, fmt.Sprintf("port=%d", config.Port))
+	}
+
+	switch config.Type {
+	case "aircon":
+		uri += "/aircon/get_control_info"
+	case "circulator":
+		uri += "/circulator/get_unit_info"
+	default:
+		err := errors.New("invalid target type")
+		return retval, err
+	}
+
+	resp, err := httpget(uri, params)
+	if err != nil {
+		return retval, err
+	}
+
+	return parseResp(resp)
+}
+
+func setControl(config daikinConfig, params []string) (url.Values, error) {
+	retval := url.Values{}
+
+	uri := "http://" + config.Host
+	if config.Host == cloudHost {
+		uri = "https://" + cloudHost
+		params = append(params, "id="+config.Id)
+		params = append(params, "spw="+config.Pw)
+		params = append(params, fmt.Sprintf("port=%d", config.Port))
+	}
+
+	switch config.Type {
+	case "aircon":
+		uri += "/aircon/set_control_info"
+	case "circulator":
+		uri += "/circulator/set_control_info"
+	default:
+		err := errors.New("invalid target type")
+		return retval, err
+	}
+
+	resp, err := httpget(uri, params)
+	if err != nil {
+		return retval, err
+	}
+
+	return parseResp(resp)
+}
+
 func parseResp(resp string) (url.Values, error) {
 	retval := url.Values{}
 	ok := false
@@ -48,56 +107,28 @@ func parseResp(resp string) (url.Values, error) {
 	if ok {
 		return retval, nil
 	}
+
 	err := errors.New("response is not OK.")
 	return retval, err
 }
 
-func getStatus(config daikinConfig) (url.Values, error) {
-	retval := url.Values{}
-	params := url.Values{}
-	url := ""
-	if config.Host == cloudHost {
-		url = "https://" + cloudHost
-		params.Add("id", config.Id)
-		params.Add("spw", config.Pw)
-		params.Add("port", fmt.Sprintf("%d", config.Port))
-	} else {
-		url = "http://" + config.Host
-	}
-
-	switch config.Type {
-	case "aircon":
-		url += "/aircon/get_control_info"
-	case "circulator":
-		url += "/circulator/get_unit_info"
-	default:
-		err := errors.New("invalid target type")
-		return retval, err
-	}
-
-	resp, err := httpget(url, params)
-	if err != nil {
-		return retval, err
-	}
-
-	fmt.Println(resp)
-	return parseResp(resp)
-}
-
-func httpget(url string, values url.Values) (string, error) {
-	params := values.Encode()
+func httpget(uri string, values []string) (string, error) {
+	params := strings.Join(values, "&")
 	if len(params) > 0 {
-		url += "?" + params
+		uri += "?" + params
 	}
 
-	resp, err := http.Get(url)
+	resp, err := http.Get(uri)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
 
 	b, _ := ioutil.ReadAll(resp.Body)
-	return string(b), nil
+	d, _ := url.QueryUnescape(string(b))
+	fmt.Println(uri)
+	fmt.Println(d)
+	return d, nil
 }
 
 /// http.go ends here

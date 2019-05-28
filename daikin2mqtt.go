@@ -1,22 +1,8 @@
 /// daikin2mqtt.go ---
 
-// mqtt topic
-//
-// [type]/[name]/power
-//              /power/set
-//              /mode
-//              /mode/set
-//              /temperature
-//              /temperature/set
-//              /fanspeed
-//              /fanspeed/set
-// sensor/[type]/[name]/temperature
-//                     /humidity
-//                     /compressor
-//
-// aircon mode 0:auto 2:dehum 3:cool 4:heat fan:6
-// aircon fanspeed 1:low 2:medium 3:high
-// circulator fanspeed 1:low 2:medium 3:high
+// power (pow=) 0:off 1:on
+// aircon mode (mode=) 0:auto 2:dehum 3:cool 4:heat fan:6
+// circulator fanmode (f_rate=) 1:low 2:medium 3:high
 
 package main
 
@@ -24,6 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
+	"time"
 )
 
 type daikinConfig struct {
@@ -35,12 +23,9 @@ type daikinConfig struct {
 	Port uint   `json:"port"`
 }
 
-type stateCirculator struct {
-	power bool
-}
-
 var (
 	exitCode = 0
+	recvmsg  = make(chan [2]string)
 )
 
 func main() {
@@ -64,9 +49,30 @@ func mainFunc() {
 
 	fmt.Println(config)
 
-	for _, cfg := range config {
-		hoge(cfg)
+	client, err := mqttInit(config)
+	if err != nil {
+		exitCode = 1
+		fmt.Println(err)
+		return
 	}
+	fmt.Println("mqtt", client)
+
+	// mqtt receive message loop
+	for {
+		select {
+		case msg := <-recvmsg:
+			topic, payload := msg[0], msg[1]
+			cfg := matchConfig(config, topic)
+			subtopic := topic[len(cfg.Type)+len(cfg.Name)+3:]
+			fmt.Println("subtopic", subtopic)
+			fmt.Println("payload", payload)
+		case <-time.After(5 * time.Minute):
+		}
+	}
+
+	//for _, cfg := range config {
+	//hoge(cfg)
+	//}
 }
 
 func readConfig(fn string) ([]daikinConfig, error) {
@@ -81,6 +87,16 @@ func readConfig(fn string) ([]daikinConfig, error) {
 	jsondec.Decode(&config)
 
 	return config, nil
+}
+
+func matchConfig(config []daikinConfig, topic string) *daikinConfig {
+	for _, cfg := range config {
+		s := fmt.Sprintf("%s/%s", cfg.Type, cfg.Name)
+		if strings.Index(topic, s) == 0 {
+			return &cfg
+		}
+	}
+	return nil
 }
 
 /// daikin2mqtt.go ends here
