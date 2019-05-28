@@ -12,6 +12,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 type daikinConfig struct {
@@ -55,10 +57,11 @@ func mainFunc() {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println("mqtt", client)
 
 	// mqtt receive message loop
 	for {
+		updateStatus(config, client)
+
 		select {
 		case msg := <-recvmsg:
 			topic, payload := msg[0], msg[1]
@@ -70,9 +73,26 @@ func mainFunc() {
 		}
 	}
 
-	//for _, cfg := range config {
-	//hoge(cfg)
-	//}
+	for _, cfg := range config {
+		hoge(cfg)
+	}
+}
+
+func updateStatus(config []daikinConfig, client mqtt.Client) {
+	for _, cfg := range config {
+		stat, err := getStatus(cfg)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+
+		switch cfg.Type {
+		case "aircon":
+			mqttSendAircon(client, cfg, stat)
+		case "circulator":
+			mqttSendCirculator(client, cfg, stat)
+		}
+	}
 }
 
 func readConfig(fn string) ([]daikinConfig, error) {

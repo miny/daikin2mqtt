@@ -1,0 +1,20 @@
+[
+  {
+    "type": "aircon",
+    "name": "livingroom",
+    "host": "aircon-living"
+  },
+  {
+    "type": "aircon",
+    "name": "bedroom",
+    "host": "aircon-bedroom"
+  },
+  {
+    "type": "circulator",
+    "name": "livingroom",
+    "host": "daikinsmartdb.jp",
+    "id": "01234567",
+    "pw": "abcdefghijk",
+    "port": 30050
+  }
+]
