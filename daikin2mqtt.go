@@ -100,16 +100,26 @@ func controlTarget(cfg *daikinConfig, topic, payload string) {
 		case "off":
 			stat.power = daikinStatPowerOff
 		case "auto":
-			stat.power = daikinStatModeAuto
+			stat.power = daikinStatPowerOn
+			stat.mode = daikinStatModeAuto
 		case "cool":
-			stat.power = daikinStatModeCool
+			stat.power = daikinStatPowerOn
+			stat.mode = daikinStatModeCool
 		case "heat":
-			stat.power = daikinStatModeHeat
+			stat.power = daikinStatPowerOn
+			stat.mode = daikinStatModeHeat
 		}
 	case "temperature/set":
 		stat.temp = payload
 	case "fanmode/set":
-		stat.fan = payload
+		switch payload {
+		case "low":
+			stat.fan = daikinStatFanLow
+		case "medium":
+			stat.fan = daikinStatFanMedium
+		case "high":
+			stat.fan = daikinStatFanHigh
+		}
 	}
 
 	for i := 0; i < 5; i++ {
