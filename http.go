@@ -15,52 +15,22 @@ const (
 	cloudHost = "daikinsmartdb.jp"
 )
 
-const (
-	daikinStatPowerOff  = "0"
-	daikinStatPowerOn   = "1"
-	daikinStatModeAuto  = "0"
-	daikinStatModeCool  = "3"
-	daikinStatModeHeat  = "4"
-	daikinStatFanLow    = "1"
-	daikinStatFanMedium = "2"
-	daikinStatFanHigh   = "3"
-)
-
-type daikinStat struct {
-	power   string // power state
-	mode    string // mode
-	fan     string // fan mode
-	temp    string // target temperature
-	hum     string // target humidity
-	intemp  string // sensor temperature
-	inhum   string // sensor humidity
-	outtemp string // sensor outdoor temperature
-}
-
-func hoge(config daikinConfig) {
-	stat, err := getStatus(config)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(stat)
-}
-
-func getStatus(config daikinConfig) (*daikinStat, error) {
+func getStatus(cfg *daikinConfig) (*daikinStat, error) {
 	stat := new(daikinStat)
 	params := []string{}
 
-	uri := "http://" + config.Host
-	if config.Host == cloudHost {
+	uri := "http://" + cfg.Host
+	if cfg.Host == cloudHost {
 		uri = "https://" + cloudHost
-		params = append(params, "id="+config.Id)
-		params = append(params, "spw="+config.Pw)
-		params = append(params, fmt.Sprintf("port=%d", config.Port))
+		params = append(params, "id="+cfg.Id)
+		params = append(params, "spw="+cfg.Pw)
+		params = append(params, fmt.Sprintf("port=%d", cfg.Port))
 	}
 
 	var resp string
 	var err error
 
-	switch config.Type {
+	switch cfg.Type {
 
 	case "aircon":
 		resp, err = httpget(uri+"/aircon/get_control_info", params)
@@ -90,18 +60,13 @@ func getStatus(config daikinConfig) (*daikinStat, error) {
 	return parseResp(resp, stat)
 }
 
-func setControl(config daikinConfig, params []string) (*daikinStat, error) {
-	stat := new(daikinStat)
-
-	uri := "http://" + config.Host
-	if config.Host == cloudHost {
+func setControl(cfg *daikinConfig, stat *daikinStat) (*daikinStat, error) {
+	uri := "http://" + cfg.Host
+	if cfg.Host == cloudHost {
 		uri = "https://" + cloudHost
-		params = append(params, "id="+config.Id)
-		params = append(params, "spw="+config.Pw)
-		params = append(params, fmt.Sprintf("port=%d", config.Port))
 	}
 
-	switch config.Type {
+	switch cfg.Type {
 	case "aircon":
 		uri += "/aircon/set_control_info"
 	case "circulator":
@@ -111,12 +76,46 @@ func setControl(config daikinConfig, params []string) (*daikinStat, error) {
 		return nil, err
 	}
 
+	params := makeParam(cfg, stat)
+
 	resp, err := httpget(uri, params)
 	if err != nil {
 		return nil, err
 	}
 
-	return parseResp(resp, stat)
+	return parseResp(resp, new(daikinStat))
+}
+
+func makeParam(cfg *daikinConfig, stat *daikinStat) (params []string) {
+	if cfg.Host == cloudHost {
+		params = append(params, "id="+cfg.Id)
+		params = append(params, "spw="+cfg.Pw)
+		params = append(params, fmt.Sprintf("port=%d", cfg.Port))
+	}
+
+	if len(stat.power) > 0 {
+		params = append(params, daikinParamPower+"="+stat.power)
+	}
+
+	if cfg.Type == "aircon" {
+		if len(stat.mode) > 0 {
+			params = append(params, daikinParamMode+"="+stat.mode)
+		}
+		if len(stat.temp) > 0 {
+			params = append(params, daikinParamTemp+"="+stat.temp)
+		}
+		if len(stat.hum) > 0 {
+			params = append(params, daikinParamHum+"="+stat.hum)
+		}
+	}
+
+	if cfg.Type == "circulator" {
+		if len(stat.fan) > 0 {
+			params = append(params, daikinParamFan+"="+stat.fan)
+		}
+	}
+
+	return params
 }
 
 func parseResp(resp string, stat *daikinStat) (*daikinStat, error) {

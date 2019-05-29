@@ -16,18 +16,9 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-type daikinConfig struct {
-	Type string `json:"type"`
-	Name string `json:"name"`
-	Host string `json:"host"`
-	Id   string `json:"id"`
-	Pw   string `json:"pw"`
-	Port uint   `json:"port"`
-}
-
 var (
 	exitCode = 0
-	recvmsg  = make(chan [2]string)
+	recvmsg  = make(chan [2]string, 5)
 )
 
 func main() {
@@ -66,21 +57,16 @@ func mainFunc() {
 		case msg := <-recvmsg:
 			topic, payload := msg[0], msg[1]
 			cfg := matchConfig(config, topic)
-			subtopic := topic[len(cfg.Type)+len(cfg.Name)+3:]
-			fmt.Println("subtopic", subtopic)
-			fmt.Println("payload", payload)
+			subtopic := topic[len(cfg.Type)+len(cfg.Name)+2:]
+			controlTarget(cfg, subtopic, payload)
 		case <-time.After(5 * time.Minute):
 		}
-	}
-
-	for _, cfg := range config {
-		hoge(cfg)
 	}
 }
 
 func updateStatus(config []daikinConfig, client mqtt.Client) {
 	for _, cfg := range config {
-		stat, err := getStatus(cfg)
+		stat, err := getStatus(&cfg)
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -88,10 +74,52 @@ func updateStatus(config []daikinConfig, client mqtt.Client) {
 
 		switch cfg.Type {
 		case "aircon":
-			mqttSendAircon(client, cfg, stat)
+			mqttSendAircon(client, &cfg, stat)
 		case "circulator":
-			mqttSendCirculator(client, cfg, stat)
+			mqttSendCirculator(client, &cfg, stat)
 		}
+	}
+}
+
+func controlTarget(cfg *daikinConfig, topic, payload string) {
+	fmt.Println(cfg)
+	fmt.Println("control", topic, payload)
+
+	stat := new(daikinStat)
+
+	switch topic {
+	case "power/set":
+		switch payload {
+		case "on":
+			stat.power = daikinStatPowerOn
+		case "off":
+			stat.power = daikinStatPowerOff
+		}
+	case "mode/set":
+		switch payload {
+		case "off":
+			stat.power = daikinStatPowerOff
+		case "auto":
+			stat.power = daikinStatModeAuto
+		case "cool":
+			stat.power = daikinStatModeCool
+		case "heat":
+			stat.power = daikinStatModeHeat
+		}
+	case "temperature/set":
+		stat.temp = payload
+	case "fanmode/set":
+		stat.fan = payload
+	}
+
+	for i := 0; i < 5; i++ {
+		rstat, err := setControl(cfg, stat)
+		if err == nil {
+			fmt.Println(rstat)
+			break
+		}
+		fmt.Println(err)
+		time.Sleep(3 * time.Second)
 	}
 }
 

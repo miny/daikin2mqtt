@@ -93,24 +93,22 @@ func mqttSendOne(client mqtt.Client, topic string, value interface{}) {
 		s = value.(string)
 	case bool:
 		if value.(bool) {
-			s = "ON"
+			s = "on"
 		} else {
-			s = "OFF"
+			s = "off"
 		}
 	default:
 		s = fmt.Sprint(value)
 	}
 	token := client.Publish(topic, 0, true, s)
 	token.Wait()
-
-	//fmt.Printf("%s: %s\n", topic, s)
 }
 
-func mqttSendAircon(client mqtt.Client, cfg daikinConfig, stat *daikinStat) {
+func mqttSendAircon(client mqtt.Client, cfg *daikinConfig, stat *daikinStat) {
 	s := fmt.Sprintf("%s/%s", cfg.Type, cfg.Name)
 
-	if stat.power {
-		mqttSendOne(client, s+"/power", "ON")
+	if stat.power == daikinStatPowerOn {
+		mqttSendOne(client, s+"/power", "on")
 		switch stat.mode {
 		case daikinStatModeAuto:
 			mqttSendOne(client, s+"/mode", "auto")
@@ -120,22 +118,34 @@ func mqttSendAircon(client mqtt.Client, cfg daikinConfig, stat *daikinStat) {
 			mqttSendOne(client, s+"/mode", "heat")
 		}
 	} else {
-		mqttSendOne(client, s+"/power", "OFF")
+		mqttSendOne(client, s+"/power", "off")
 		mqttSendOne(client, s+"/mode", "off")
 	}
-	mqttSendOne(client, s+"/temperature", stat.temp)
+	if len(stat.temp) > 0 {
+		mqttSendOne(client, s+"/temperature", stat.temp)
+	}
 
 	s = fmt.Sprintf("sensor/%s/%s", cfg.Type, cfg.Name)
 
-	mqttSendOne(client, s+"/temperature", stat.intemp)
-	mqttSendOne(client, s+"/humidity", stat.inhum)
-	mqttSendOne(client, s+"/outtemp", stat.outtemp)
+	if len(stat.intemp) > 0 {
+		mqttSendOne(client, s+"/temperature", stat.intemp)
+	}
+	if len(stat.inhum) > 0 {
+		mqttSendOne(client, s+"/humidity", stat.inhum)
+	}
+	if len(stat.outtemp) > 0 {
+		mqttSendOne(client, s+"/outtemp", stat.outtemp)
+	}
 }
 
-func mqttSendCirculator(client mqtt.Client, cfg daikinConfig, stat *daikinStat) {
+func mqttSendCirculator(client mqtt.Client, cfg *daikinConfig, stat *daikinStat) {
 	s := fmt.Sprintf("%s/%s", cfg.Type, cfg.Name)
 
-	mqttSendOne(client, s+"/power", stat.power == daikinStatPowerOn)
+	if stat.power == daikinStatPowerOn {
+		mqttSendOne(client, s+"/power", "on")
+	} else {
+		mqttSendOne(client, s+"/power", "off")
+	}
 	switch stat.fan {
 	case daikinStatFanLow:
 		mqttSendOne(client, s+"/fanmode", "low")
