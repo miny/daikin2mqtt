@@ -3,12 +3,13 @@
 package main
 
 type daikinConfig struct {
-	Type string `json:"type"`
-	Name string `json:"name"`
-	Host string `json:"host"`
-	Id   string `json:"id"`
-	Pw   string `json:"pw"`
-	Port uint   `json:"port"`
+	Type    string `json:"type"`
+	Name    string `json:"name"`
+	Host    string `json:"host"`
+	Id      string `json:"id"`
+	Pw      string `json:"pw"`
+	Port    uint   `json:"port"`
+	curstat daikinStat
 }
 
 const (

@@ -51,9 +51,17 @@ func makeTopics(config []daikinConfig) (map[string]byte, error) {
 			err := errors.New("invalid target type or name.")
 			return topics, err
 		}
-		for _, t := range topicAircon {
-			s := fmt.Sprintf("%s/%s/%s", cfg.Type, cfg.Name, t)
-			topics[s] = byte(0)
+		if cfg.Type == "aircon" {
+			for _, t := range topicAircon {
+				s := fmt.Sprintf("%s/%s/%s", cfg.Type, cfg.Name, t)
+				topics[s] = byte(0)
+			}
+		}
+		if cfg.Type == "circulator" {
+			for _, t := range topicCirculator {
+				s := fmt.Sprintf("%s/%s/%s", cfg.Type, cfg.Name, t)
+				topics[s] = byte(0)
+			}
 		}
 	}
 
@@ -66,6 +74,7 @@ func mqttInit(config []daikinConfig) (mqtt.Client, error) {
 	opts.SetAutoReconnect(true)
 	opts.SetDefaultPublishHandler(
 		func(c mqtt.Client, msg mqtt.Message) {
+			fmt.Println("receive", msg.Topic(), string(msg.Payload()))
 			recvmsg <- [2]string{msg.Topic(), string(msg.Payload())}
 		})
 

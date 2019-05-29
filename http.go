@@ -16,7 +16,6 @@ const (
 )
 
 func getStatus(cfg *daikinConfig) (*daikinStat, error) {
-	stat := new(daikinStat)
 	params := []string{}
 
 	uri := "http://" + cfg.Host
@@ -29,6 +28,7 @@ func getStatus(cfg *daikinConfig) (*daikinStat, error) {
 
 	var resp string
 	var err error
+	stat := new(daikinStat)
 
 	switch cfg.Type {
 
@@ -45,9 +45,17 @@ func getStatus(cfg *daikinConfig) (*daikinStat, error) {
 		if err != nil {
 			return nil, err
 		}
+		stat, err = parseResp(resp, stat)
+		if err != nil {
+			return nil, err
+		}
 
 	case "circulator":
 		resp, err = httpget(uri+"/circulator/get_unit_info", params)
+		if err != nil {
+			return nil, err
+		}
+		stat, err = parseResp(resp, stat)
 		if err != nil {
 			return nil, err
 		}
@@ -57,7 +65,7 @@ func getStatus(cfg *daikinConfig) (*daikinStat, error) {
 		return nil, err
 	}
 
-	return parseResp(resp, stat)
+	return stat, nil
 }
 
 func setControl(cfg *daikinConfig, stat *daikinStat) (*daikinStat, error) {
@@ -95,17 +103,31 @@ func makeParam(cfg *daikinConfig, stat *daikinStat) (params []string) {
 
 	if len(stat.power) > 0 {
 		params = append(params, daikinParamPower+"="+stat.power)
+	} else if len(cfg.curstat.power) > 0 {
+		params = append(params, daikinParamPower+"="+cfg.curstat.power)
+	} else {
+		params = append(params, daikinParamPower+"=0")
 	}
 
 	if cfg.Type == "aircon" {
 		if len(stat.mode) > 0 {
 			params = append(params, daikinParamMode+"="+stat.mode)
+		} else if len(cfg.curstat.mode) > 0 {
+			params = append(params, daikinParamMode+"="+cfg.curstat.mode)
+		} else {
+			params = append(params, daikinParamMode+"=0")
 		}
 		if len(stat.temp) > 0 {
 			params = append(params, daikinParamTemp+"="+stat.temp)
+		} else if len(cfg.curstat.temp) > 0 {
+			params = append(params, daikinParamTemp+"="+cfg.curstat.temp)
+		} else if cfg.Type == "aircon" {
+			params = append(params, daikinParamTemp+"=26.0")
 		}
 		if len(stat.hum) > 0 {
 			params = append(params, daikinParamHum+"="+stat.hum)
+		} else {
+			params = append(params, daikinParamHum+"=CONTINUE")
 		}
 	}
 

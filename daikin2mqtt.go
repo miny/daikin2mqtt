@@ -40,8 +40,6 @@ func mainFunc() {
 		return
 	}
 
-	fmt.Println(config)
-
 	client, err := mqttInit(config)
 	if err != nil {
 		exitCode = 1
@@ -61,16 +59,20 @@ func mainFunc() {
 			controlTarget(cfg, subtopic, payload)
 		case <-time.After(5 * time.Minute):
 		}
+
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 
 func updateStatus(config []daikinConfig, client mqtt.Client) {
-	for _, cfg := range config {
+	for i, cfg := range config {
 		stat, err := getStatus(&cfg)
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
+
+		config[i].curstat = *stat
 
 		switch cfg.Type {
 		case "aircon":
@@ -82,13 +84,14 @@ func updateStatus(config []daikinConfig, client mqtt.Client) {
 }
 
 func controlTarget(cfg *daikinConfig, topic, payload string) {
-	fmt.Println(cfg)
-	fmt.Println("control", topic, payload)
-
 	stat := new(daikinStat)
 
 	switch topic {
 	case "power/set":
+		if (payload == "on" && cfg.curstat.power == daikinStatPowerOn) ||
+			(payload == "off" && cfg.curstat.power == daikinStatPowerOff) {
+			return
+		}
 		switch payload {
 		case "on":
 			stat.power = daikinStatPowerOn
@@ -97,7 +100,7 @@ func controlTarget(cfg *daikinConfig, topic, payload string) {
 		}
 	case "mode/set":
 		switch payload {
-		case "off":
+		case "off", "offline", "False":
 			stat.power = daikinStatPowerOff
 		case "auto":
 			stat.power = daikinStatPowerOn
@@ -123,9 +126,8 @@ func controlTarget(cfg *daikinConfig, topic, payload string) {
 	}
 
 	for i := 0; i < 5; i++ {
-		rstat, err := setControl(cfg, stat)
+		_, err := setControl(cfg, stat)
 		if err == nil {
-			fmt.Println(rstat)
 			break
 		}
 		fmt.Println(err)
