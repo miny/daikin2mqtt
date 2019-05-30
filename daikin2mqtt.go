@@ -49,37 +49,42 @@ func mainFunc() {
 
 	// mqtt receive message loop
 	for {
-		updateStatus(config, client)
-
 		select {
 		case msg := <-recvmsg:
 			topic, payload := msg[0], msg[1]
 			cfg := matchConfig(config, topic)
 			subtopic := topic[len(cfg.Type)+len(cfg.Name)+2:]
 			controlTarget(cfg, subtopic, payload)
+			updateStatusOne(cfg, client)
+
 		case <-time.After(5 * time.Minute):
+			updateStatus(config, client)
 		}
 
 		time.Sleep(100 * time.Millisecond)
 	}
 }
 
+func updateStatusOne(cfg *daikinConfig, client mqtt.Client) {
+	stat, err := getStatus(cfg)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	cfg.curstat = *stat
+
+	switch cfg.Type {
+	case "aircon":
+		mqttSendAircon(client, cfg, stat)
+	case "circulator":
+		mqttSendCirculator(client, cfg, stat)
+	}
+}
+
 func updateStatus(config []daikinConfig, client mqtt.Client) {
-	for i, cfg := range config {
-		stat, err := getStatus(&cfg)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-
-		config[i].curstat = *stat
-
-		switch cfg.Type {
-		case "aircon":
-			mqttSendAircon(client, &cfg, stat)
-		case "circulator":
-			mqttSendCirculator(client, &cfg, stat)
-		}
+	for i, _ := range config {
+		updateStatusOne(&config[i], client)
 	}
 }
 
@@ -150,10 +155,10 @@ func readConfig(fn string) ([]daikinConfig, error) {
 }
 
 func matchConfig(config []daikinConfig, topic string) *daikinConfig {
-	for _, cfg := range config {
+	for i, cfg := range config {
 		s := fmt.Sprintf("%s/%s", cfg.Type, cfg.Name)
 		if strings.Index(topic, s) == 0 {
-			return &cfg
+			return &config[i]
 		}
 	}
 	return nil
