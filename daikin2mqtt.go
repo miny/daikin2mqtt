@@ -47,6 +47,8 @@ func mainFunc() {
 		return
 	}
 
+	updateStatus(config, client)
+
 	// mqtt receive message loop
 	for {
 		select {
