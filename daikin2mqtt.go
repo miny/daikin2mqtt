@@ -55,9 +55,11 @@ func mainFunc() {
 		case msg := <-recvmsg:
 			topic, payload := msg[0], msg[1]
 			cfg := matchConfig(config, topic)
-			subtopic := topic[len(cfg.Type)+len(cfg.Name)+2:]
-			controlTarget(cfg, subtopic, payload)
-			updateStatusOne(cfg, client)
+			if cfg != nil {
+				subtopic := topic[len(cfg.Type)+len(cfg.Name)+2:]
+				controlTarget(cfg, subtopic, payload)
+				updateStatusOne(cfg, client)
+			}
 
 		case <-time.After(5 * time.Minute):
 			updateStatus(config, client)
@@ -95,15 +97,19 @@ func controlTarget(cfg *daikinConfig, topic, payload string) {
 
 	switch topic {
 	case "power/set":
-		if (payload == "on" && cfg.curstat.power == daikinStatPowerOn) ||
-			(payload == "off" && cfg.curstat.power == daikinStatPowerOff) {
-			return
-		}
 		switch payload {
 		case "on":
+			if cfg.curstat.power == daikinStatPowerOn {
+				return
+			}
 			stat.power = daikinStatPowerOn
 		case "off":
+			if cfg.curstat.power == daikinStatPowerOff {
+				return
+			}
 			stat.power = daikinStatPowerOff
+		default:
+			return
 		}
 	case "mode/set":
 		switch payload {
@@ -118,6 +124,8 @@ func controlTarget(cfg *daikinConfig, topic, payload string) {
 		case "heat":
 			stat.power = daikinStatPowerOn
 			stat.mode = daikinStatModeHeat
+		default:
+			return
 		}
 	case "temperature/set":
 		stat.temp = payload
@@ -129,6 +137,8 @@ func controlTarget(cfg *daikinConfig, topic, payload string) {
 			stat.fan = daikinStatFanMedium
 		case "high":
 			stat.fan = daikinStatFanHigh
+		default:
+			return
 		}
 	}
 
