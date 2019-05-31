@@ -24,6 +24,8 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
+	"strconv"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
@@ -74,7 +76,7 @@ func mqttInit(config []daikinConfig) (mqtt.Client, error) {
 	opts.SetAutoReconnect(true)
 	opts.SetDefaultPublishHandler(
 		func(c mqtt.Client, msg mqtt.Message) {
-			fmt.Println("receive", msg.Topic(), string(msg.Payload()))
+			log.Print("receive", msg.Topic(), string(msg.Payload()))
 			recvmsg <- [2]string{msg.Topic(), string(msg.Payload())}
 		})
 
@@ -130,19 +132,19 @@ func mqttSendAircon(client mqtt.Client, cfg *daikinConfig, stat *daikinStat) {
 		mqttSendOne(client, s+"/power", "off")
 		mqttSendOne(client, s+"/mode", "off")
 	}
-	if len(stat.temp) > 0 {
+	if chktemp(stat.temp) {
 		mqttSendOne(client, s+"/temperature", stat.temp)
 	}
 
 	s = fmt.Sprintf("sensor/%s/%s", cfg.Type, cfg.Name)
 
-	if len(stat.intemp) > 0 {
+	if chktemp(stat.intemp) {
 		mqttSendOne(client, s+"/temperature", stat.intemp)
 	}
-	if len(stat.inhum) > 0 {
+	if chktemp(stat.inhum) {
 		mqttSendOne(client, s+"/humidity", stat.inhum)
 	}
-	if len(stat.outtemp) > 0 {
+	if chktemp(stat.outtemp) {
 		mqttSendOne(client, s+"/outtemp", stat.outtemp)
 	}
 }
@@ -163,6 +165,14 @@ func mqttSendCirculator(client mqtt.Client, cfg *daikinConfig, stat *daikinStat)
 	case daikinStatFanHigh:
 		mqttSendOne(client, s+"/fanmode", "high")
 	}
+}
+
+func chktemp(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	_, err := strconv.ParseFloat(s, 32)
+	return err == nil
 }
 
 /// mqtt.go ends here

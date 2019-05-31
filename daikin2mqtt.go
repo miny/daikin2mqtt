@@ -9,6 +9,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -17,34 +18,23 @@ import (
 )
 
 var (
-	exitCode = 0
-	recvmsg  = make(chan [2]string, 5)
+	recvmsg = make(chan [2]string, 5)
 )
 
 func main() {
-	mainFunc()
-	os.Exit(exitCode)
-}
-
-func mainFunc() {
 	if len(os.Args) < 2 {
 		fmt.Printf("usage: %s <FILE>\n", os.Args[0])
-		exitCode = 1
-		return
+		os.Exit(1)
 	}
 
 	config, err := readConfig(os.Args[1])
 	if err != nil {
-		exitCode = 1
-		fmt.Println(err)
-		return
+		log.Fatal(err)
 	}
 
 	client, err := mqttInit(config)
 	if err != nil {
-		exitCode = 1
-		fmt.Println(err)
-		return
+		log.Fatal(err)
 	}
 
 	updateStatus(config, client)
