@@ -24,7 +24,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -76,7 +75,6 @@ func mqttInit(config []daikinConfig) (mqtt.Client, error) {
 	opts.SetAutoReconnect(true)
 	opts.SetDefaultPublishHandler(
 		func(c mqtt.Client, msg mqtt.Message) {
-			log.Print("receive", msg.Topic(), string(msg.Payload()))
 			recvmsg <- [2]string{msg.Topic(), string(msg.Payload())}
 		})
 

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -202,8 +201,8 @@ func httpget(uri string, values []string) (string, error) {
 
 	b, _ := ioutil.ReadAll(resp.Body)
 	d, _ := url.QueryUnescape(string(b))
-	log.Print(uri)
-	log.Print(d)
+	//log.Print(uri)
+	//log.Print(d)
 	return d, nil
 }
 

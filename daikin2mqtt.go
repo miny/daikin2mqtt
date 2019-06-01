@@ -62,7 +62,7 @@ func main() {
 func updateStatusOne(cfg *daikinConfig, client mqtt.Client) {
 	stat, err := getStatus(cfg)
 	if err != nil {
-		fmt.Println(err)
+		log.Print(err)
 		return
 	}
 
@@ -137,7 +137,7 @@ func controlTarget(cfg *daikinConfig, topic, payload string) {
 		if err == nil {
 			break
 		}
-		fmt.Println(err)
+		log.Print(err)
 		time.Sleep(3 * time.Second)
 	}
 }
