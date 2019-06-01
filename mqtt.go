@@ -75,6 +75,7 @@ func mqttInit(config []daikinConfig) (mqtt.Client, error) {
 	opts.SetAutoReconnect(true)
 	opts.SetDefaultPublishHandler(
 		func(c mqtt.Client, msg mqtt.Message) {
+			//log.Print(msg.Topic(), string(msg.Payload()))
 			recvmsg <- [2]string{msg.Topic(), string(msg.Payload())}
 		})
 

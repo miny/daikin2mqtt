@@ -129,7 +129,7 @@ func makeParam(cfg *daikinConfig, stat *daikinStat) (params []string) {
 		if len(stat.hum) > 0 {
 			params = append(params, daikinParamHum+"="+stat.hum)
 		} else if len(cfg.curstat.hum) > 0 {
-			params = append(params, daikinParamTemp+"="+cfg.curstat.hum)
+			params = append(params, daikinParamHum+"="+cfg.curstat.hum)
 		} else {
 			params = append(params, daikinParamHum+"=CONTINUE")
 		}
