@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 const (
@@ -193,7 +194,11 @@ func httpget(uri string, values []string) (string, error) {
 		uri += "?" + params
 	}
 
-	resp, err := http.Get(uri)
+	client := http.Client{
+		Timeout: time.Duration(5 * time.Second),
+	}
+
+	resp, err := client.Get(uri)
 	if err != nil {
 		return "", err
 	}
