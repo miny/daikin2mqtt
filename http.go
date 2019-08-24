@@ -111,14 +111,20 @@ func makeParam(cfg *daikinConfig, stat *daikinStat) (params []string) {
 	}
 
 	if cfg.Type == "aircon" {
+		modeAuto := false
 		if len(stat.mode) > 0 {
 			params = append(params, daikinParamMode+"="+stat.mode)
+			modeAuto = stat.mode == daikinStatModeAuto
 		} else if len(cfg.curstat.mode) > 0 {
 			params = append(params, daikinParamMode+"="+cfg.curstat.mode)
+			modeAuto = stat.mode == cfg.curstat.mode
 		} else {
-			params = append(params, daikinParamMode+"=0")
+			params = append(params, daikinParamMode+"="+daikinStatModeAuto)
+			modeAuto = true
 		}
 
+		if modeAuto {
+			params = append(params, daikinParamTemp+"=M")
 		if len(stat.temp) > 0 {
 			params = append(params, daikinParamTemp+"="+stat.temp)
 		} else if len(cfg.curstat.temp) > 0 {
@@ -127,7 +133,9 @@ func makeParam(cfg *daikinConfig, stat *daikinStat) (params []string) {
 			params = append(params, daikinParamTemp+"=26.0")
 		}
 
-		if len(stat.hum) > 0 {
+		if modeAuto {
+			params = append(params, daikinParamHum+"=AUTO")
+		} else if len(stat.hum) > 0 {
 			params = append(params, daikinParamHum+"="+stat.hum)
 		} else if len(cfg.curstat.hum) > 0 {
 			params = append(params, daikinParamHum+"="+cfg.curstat.hum)
